@@ -1,3 +1,5 @@
+# expense_splitter.py
+
 from collections import defaultdict
 
 def calculate_balances(expenses, families):
@@ -10,8 +12,8 @@ def calculate_balances(expenses, families):
     return total, share, balances
 
 
-if __name__ == "_main_":
-    print("=== Community Expense Splitter (Multiple Expenses) ===\n")
+if __name__ == "__main__":
+    print("=== Community Expense Splitter (Multiple Expenses) ===\n", flush=True)
 
     families = int(input("Enter number of families: "))
     expenses = defaultdict(float)
@@ -30,15 +32,15 @@ if __name__ == "_main_":
     total, share, balances = calculate_balances(expenses, families)
 
     # Output results
-    print("\n--- Expense Report ---")
-    print(f"Total spent: £{total:.2f}")
-    print(f"Each family's share: £{share:.2f}\n")
+    print("\n--- Expense Report ---", flush=True)
+    print(f"Total spent: £{total:.2f}", flush=True)
+    print(f"Each family's share: £{share:.2f}\n", flush=True)
 
-    print("--- Settlement ---")
+    print("--- Settlement ---", flush=True)
     for fam, balance in balances.items():
         if balance > 0:
-            print(f"{fam} should RECEIVE £{balance:.2f}")
+            print(f"{fam} should RECEIVE £{balance:.2f}", flush=True)
         elif balance < 0:
-            print(f"{fam} should PAY £{-balance:.2f}")
+            print(f"{fam} should PAY £{-balance:.2f}", flush=True)
         else:
-            print(f"{fam} is settled.")
+            print(f"{fam} is settled.", flush=True)
