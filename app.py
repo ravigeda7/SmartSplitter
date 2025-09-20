@@ -1,70 +1,67 @@
-# app.py
-
 import streamlit as st
-from storage.sheets_storage import read_families, read_event_details, read_event_expenses
+from storage.sheets_storage import read_families, read_event_details, read_event_expenses, append_expense
 from expenses import calculate_event_balances
+import gspread
+from google.oauth2.service_account import Credentials
 
-st.title("⚖️ Glevum Green Indian Community Balance Sheet")
+# Title + Slogan
+st.title("⚖️ Indian Community Expense Splitter")
 
-# Create 5 equal columns
 col1, col2, col3, col4, col5 = st.columns(5)
+with col1: st.markdown("### बराबर")
+with col2: st.markdown("### సమ తుల్యం")
+with col3: st.markdown("### ಸಮ ತೂಲ್ಯಂ")
+with col4: st.markdown("### சம துல்யம்")
+with col5: st.markdown("### ਸਮ ਤੁਲ੍ਯਮ੍")
 
-with col1:
-    st.markdown("### बराबर")   # Hindi
-with col2:
-    st.markdown("### సమ తుల్యం")  # Telugu
-with col3:
-    st.markdown("### ಸಮ ತೂಲ್ಯಂ")  # Kannada
-with col4:
-    st.markdown("### சம துல்யம்")  # Tamil
-with col5:
-    st.markdown("### ਸਮ ਤੁਲ੍ਯਮ੍")  # Punjabi
-
-# --- Data Loading ---
+# Load data
 families = read_families()
 family_map = {f['Family ID']: f['Family Name'] for f in families}
-
 events = read_event_details()
 event_names = [e['Event Name'] for e in events]
 
-# --- Event Selection ---
+# Select Event
 selected_event_name = st.selectbox("Select Event:", event_names)
-event = next((e for e in events if e['Event Name'] == selected_event_name), None)
+event = next(e for e in events if e['Event Name'] == selected_event_name)
+participant_ids = event['Participating Families']
+records = read_event_expenses(event['Event ID'])
 
-if event:
-    # --- Data Processing ---
-    # The 'Participating Families' key now directly contains a list of Family IDs.
-    participant_ids = event.get('Participating Families', [])
+# Show Expenses Table
+st.subheader("Expenses")
+st.dataframe(records)
 
-    records = read_event_expenses(event['Event ID'])
+# Expense Form (only if event is Open)
+if event['Status'].lower() == "open":
+    st.subheader("➕ Add Expense")
+    with st.form("expense_form", clear_on_submit=True):
+        fam_choice = st.selectbox("Family", [family_map[fid] for fid in participant_ids])
+        description = st.text_input("Description")
+        amount = st.number_input("Amount", min_value=0.0, format="%.2f")
+        submitted = st.form_submit_button("Submit")
 
-    # --- Display Expenses ---
-    st.subheader(f"Expenses for {selected_event_name}")
-    if records:
-        st.dataframe(records)
-    else:
-        st.info("No expense records found for this event.")
+        if submitted:
+            # Map family name back to ID
+            fam_id = [fid for fid, name in family_map.items() if name == fam_choice][0]
 
-    # --- Calculation ---
-    total, share, balances = calculate_event_balances(records, participant_ids)
+            append_expense(event['Event ID'], fam_id, description, amount)
 
-    # --- Display Report ---
-    st.subheader("Report")
-    st.write(f"**Total spent:** £{total:.2f}")
-    st.write(f"**Each participant's share:** £{share:.2f}")
+            st.success("Expense added successfully! Please refresh to see it.")
 
-    # --- Display Settlement ---
-    st.subheader("Settlement")
-    if not balances:
-        st.info("No balances to settle.")
-    else:
-        for fam_id, balance in balances.items():
-            fam_name = family_map.get(fam_id, "Unknown Family")
-            if balance > 0:
-                st.success(f"{fam_name} should RECEIVE £{balance:.2f}")
-            elif balance < 0:
-                st.error(f"{fam_name} should PAY £{-balance:.2f}")
-            else:
-                st.info(f"{fam_name} is settled")
 else:
-    st.warning("Please select an event.")
+    st.info("This event is closed. You can only view calculations.")
+
+# Settlement Report
+st.subheader("Report")
+total, share, balances = calculate_event_balances(records, participant_ids)
+st.write(f"**Total spent:** £{total:.2f}")
+st.write(f"**Each participant's share:** £{share:.2f}")
+
+st.subheader("Settlement")
+for fam_id, balance in balances.items():
+    fam_name = family_map.get(fam_id, fam_id)
+    if balance > 0:
+        st.success(f"{fam_name} should RECEIVE £{balance:.2f}")
+    elif balance < 0:
+        st.error(f"{fam_name} should PAY £{-balance:.2f}")
+    else:
+        st.info(f"{fam_name} is settled")
