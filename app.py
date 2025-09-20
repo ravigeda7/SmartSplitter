@@ -1,50 +1,56 @@
 # app.py
 
 import streamlit as st
-from expenses import calculate_balances
-from storage.csv_storage import read_csv, write_csv
-from storage.sheets_storage import read_google_sheet
-
-st.set_page_config(page_title="Community Expense Splitter", page_icon="💰")
+from storage.sheets_storage import read_families, read_event_details, read_event_expenses
+from expenses import calculate_event_balances
 
 st.title("💰 Community Expense Splitter")
 
-# Choose source
-source = st.radio("Select data source:", ["CSV", "Google Sheets"])
+# --- Data Loading ---
+families = read_families()
+family_map = {f['Family ID']: f['Family Name'] for f in families}
 
-records = []
+events = read_event_details()
+event_names = [e['Event Name'] for e in events]
 
-if source == "CSV":
-    uploaded_file = st.file_uploader("Upload CSV file", type="csv")
-    if uploaded_file:
-        import pandas as pd
-        df = pd.read_csv(uploaded_file)
-        records = df.to_dict(orient="records")
+# --- Event Selection ---
+selected_event_name = st.selectbox("Select Event:", event_names)
+event = next((e for e in events if e['Event Name'] == selected_event_name), None)
 
-elif source == "Google Sheets":
-    sheet_name = st.text_input("Enter Google Sheet name")
-    if st.button("Load Sheet") and sheet_name:
-        try:
-            records = read_google_sheet(sheet_name)
-        except Exception as e:
-            st.error(f"Error loading sheet: {e}")
+if event:
+    # --- Data Processing ---
+    # The 'Participating Families' key now directly contains a list of Family IDs.
+    participant_ids = event.get('Participating Families', [])
 
-# Show results if we have data
-if records:
-    st.subheader("📊 Expenses")
-    st.dataframe(records)
+    records = read_event_expenses(event['Event ID'])
 
-    total, share, balances = calculate_balances(records)
+    # --- Display Expenses ---
+    st.subheader(f"Expenses for {selected_event_name}")
+    if records:
+        st.dataframe(records)
+    else:
+        st.info("No expense records found for this event.")
 
-    st.subheader("📋 Expense Report")
+    # --- Calculation ---
+    total, share, balances = calculate_event_balances(records, participant_ids)
+
+    # --- Display Report ---
+    st.subheader("Report")
     st.write(f"**Total spent:** £{total:.2f}")
-    st.write(f"**Each family's share:** £{share:.2f}")
+    st.write(f"**Each participant's share:** £{share:.2f}")
 
-    st.subheader("💸 Settlement")
-    for fam, balance in balances.items():
-        if balance > 0:
-            st.success(f"{fam} should RECEIVE £{balance:.2f}")
-        elif balance < 0:
-            st.error(f"{fam} should PAY £{-balance:.2f}")
-        else:
-            st.info(f"{fam} is settled.")
+    # --- Display Settlement ---
+    st.subheader("Settlement")
+    if not balances:
+        st.info("No balances to settle.")
+    else:
+        for fam_id, balance in balances.items():
+            fam_name = family_map.get(fam_id, "Unknown Family")
+            if balance > 0:
+                st.success(f"{fam_name} should RECEIVE £{balance:.2f}")
+            elif balance < 0:
+                st.error(f"{fam_name} should PAY £{-balance:.2f}")
+            else:
+                st.info(f"{fam_name} is settled")
+else:
+    st.warning("Please select an event.")

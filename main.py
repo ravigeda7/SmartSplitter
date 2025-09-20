@@ -1,36 +1,28 @@
 # main.py
 
-from expenses import calculate_balances
-from storage.csv_storage import read_csv
-from storage.sheets_storage import read_google_sheet
+from storage.sheets_storage import read_families, read_event_details, read_event_expenses
+from expenses import calculate_event_balances
 
-def show_report(records):
-    total, share, balances = calculate_balances(records)
+def display_event_report(event):
+    print(f"\n=== {event['Event Name']} ({event['Date']}) ===")
+    participant_ids = event['Participating Families']
+    records = read_event_expenses(event['Event ID'])
+    total, share, balances = calculate_event_balances(records, participant_ids)
 
-    print("\n--- Expense Report ---")
     print(f"Total spent: £{total:.2f}")
-    print(f"Each family's share: £{share:.2f}\n")
-
-    print("--- Settlement ---")
-    for fam, balance in balances.items():
-        if balance > 0:
-            print(f"{fam} should RECEIVE £{balance:.2f}")
-        elif balance < 0:
-            print(f"{fam} should PAY £{-balance:.2f}")
-        else:
-            print(f"{fam} is settled.")
+    print(f"Each participant's share: £{share:.2f}\n")
+    print("Settlement:")
+    for fam_id, balance in balances.items():
+        print(f"{fam_id}: {'RECEIVE' if balance>0 else 'PAY' if balance<0 else 'Settled'} £{abs(balance):.2f}")
 
 if __name__ == "__main__":
-    print("=== Community Expense Splitter ===")
+    families = read_families()
+    events = read_event_details()
 
-    # Choose data source
-    source = input("Read from (1) CSV or (2) Google Sheets? ")
+    print("Available Events:")
+    for idx, e in enumerate(events):
+        print(f"{idx+1}. {e['Event Name']} ({e['Date']})")
 
-    if source == "1":
-        filename = input("Enter CSV filename: ")
-        records = read_csv(filename)
-    else:
-        sheet_name = input("Enter Google Sheet name: ")
-        records = read_google_sheet(sheet_name)
-
-    show_report(records)
+    choice = int(input("Select event number: "))
+    event = events[choice-1]
+    display_event_report(event)
