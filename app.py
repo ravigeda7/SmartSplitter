@@ -4,7 +4,21 @@ import streamlit as st
 from storage.sheets_storage import read_families, read_event_details, read_event_expenses
 from expenses import calculate_event_balances
 
-st.title("💰 Community Expense Splitter")
+st.title("⚖️ Glevum Green Indian Community Balance Sheet")
+
+# Create 5 equal columns
+col1, col2, col3, col4, col5 = st.columns(5)
+
+with col1:
+    st.markdown("### बराबर")   # Hindi
+with col2:
+    st.markdown("### సమ తుల్యం")  # Telugu
+with col3:
+    st.markdown("### ಸಮ ತೂಲ್ಯಂ")  # Kannada
+with col4:
+    st.markdown("### சம துல்யம்")  # Tamil
+with col5:
+    st.markdown("### ਸਮ ਤੁਲ੍ਯਮ੍")  # Punjabi
 
 # --- Data Loading ---
 families = read_families()
