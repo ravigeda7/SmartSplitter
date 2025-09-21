@@ -3,9 +3,10 @@ from storage.sheets_storage import read_families, read_event_details, read_event
 from expenses import calculate_event_balances
 import gspread
 from google.oauth2.service_account import Credentials
+import pandas as pd
 
 # Title + Slogan
-st.title("⚖️ Indian Community Expense Splitter")
+st.title("⚖️ Our Community Expenses")
 
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1: st.markdown("### बराबर")
@@ -26,9 +27,21 @@ event = next(e for e in events if e['Event Name'] == selected_event_name)
 participant_ids = event['Participating Families']
 records = read_event_expenses(event['Event ID'])
 
-# Show Expenses Table
+# Prepare DataFrame to show Family Name instead of ID and remove Expense ID
+df_display = pd.DataFrame(records)
+
+# Map Family ID → Family Name
+df_display['Family'] = df_display['Family ID'].map(family_map)
+
+# Keep only the columns you want: Family, Description, Amount
+df_display = df_display[['Family', 'Description', 'Amount']]
+
 st.subheader("Expenses")
-st.dataframe(records)
+st.dataframe(df_display)
+#
+# # Show Expenses Table
+# st.subheader("Expenses")
+# st.dataframe(records)
 
 # Expense Form (only if event is Open)
 if event['Status'].lower() == "open":
