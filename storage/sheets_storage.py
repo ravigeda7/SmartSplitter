@@ -6,57 +6,20 @@ import streamlit as st
 
 # Declare the Google Sheet name ONCE here
 SPREADSHEET_NAME = "https://docs.google.com/spreadsheets/d/1qyLxf4WDh2J0GZcaUz1e7J36TRcqT2BM7tElwxEANFA"
+SCOPES=["https://www.googleapis.com/auth/spreadsheets"]
 
-# def get_google_client(credentials_file="credentials.json"):
-#     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-#     creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
-#     client = gspread.authorize(creds)
-#     return client
-
-# def get_google_client():
-#     creds_dict = json.loads(os.environ["STREAMLIT_CREDENTIALS_JSON"])
-#     creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
-#     client = gspread.authorize(creds)
-#     return client
-
-# def get_google_client():
-#     # Load from secrets
-#     creds_dict = json.loads(st.secrets["google"]["credentials_json"])
-#     creds = Credentials.from_service_account_info(
-#         creds_dict,
-#         scopes=["https://www.googleapis.com/auth/spreadsheets"]
-#     )
-#     return gspread.authorize(creds)
-
+# Check if we are in a Streamlit Cloud environment
 def get_google_client():
-    creds = None
+     if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
+         # Use Streamlit's secrets management
+         creds_dict = st.secrets["gcp_service_account"]
+         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+     else:
+         # Fallback to local credentials file for local development
+         creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
 
-    try:
-        import streamlit as st
-        if "google" in st.secrets:
-            creds_data = st.secrets["google"]["credentials_json"]
-
-            # Handle if already dict OR string
-            if isinstance(creds_data, str):
-                creds_dict = json.loads(creds_data)
-            else:
-                creds_dict = dict(creds_data)  # already a dict
-
-            creds = Credentials.from_service_account_info(
-                creds_dict,
-                scopes=["https://www.googleapis.com/auth/spreadsheets"]
-            )
-    except Exception:
-        pass
-
-    if creds is None:
-        # fallback: load from local file
-        creds = Credentials.from_service_account_file(
-            "credentials.json",
-            scopes=["https://www.googleapis.com/auth/spreadsheets"]
-        )
-
-    return gspread.authorize(creds)
+     client = gspread.authorize(creds)
+     return client
 
 def get_spreadsheet():
     """Return the spreadsheet object"""
