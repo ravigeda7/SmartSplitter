@@ -61,7 +61,7 @@ if event['Status'].lower() == "open":
             st.success("Expense added successfully! Please refresh to see it.")
 
 else:
-    st.info("This event is closed. You can only view calculations.")
+    st.info("This event is closed. You can only view the report.")
 
 # Settlement Report
 st.subheader("Report")
