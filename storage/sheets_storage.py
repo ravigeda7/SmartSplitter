@@ -1,14 +1,20 @@
 # storage/sheets_storage.py
 
-import gspread
+import gspread, json, os
 from google.oauth2.service_account import Credentials
 
 # Declare the Google Sheet name ONCE here
 SPREADSHEET_NAME = "https://docs.google.com/spreadsheets/d/1qyLxf4WDh2J0GZcaUz1e7J36TRcqT2BM7tElwxEANFA"
 
-def get_google_client(credentials_file="credentials.json"):
-    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+# def get_google_client(credentials_file="credentials.json"):
+#     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+#     creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+#     client = gspread.authorize(creds)
+#     return client
+
+def get_google_client():
+    creds_dict = json.loads(os.environ["STREAMLIT_CREDENTIALS_JSON"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
     client = gspread.authorize(creds)
     return client
 
