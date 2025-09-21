@@ -2,6 +2,7 @@
 
 import gspread, json, os
 from google.oauth2.service_account import Credentials
+import streamlit as st
 
 # Declare the Google Sheet name ONCE here
 SPREADSHEET_NAME = "https://docs.google.com/spreadsheets/d/1qyLxf4WDh2J0GZcaUz1e7J36TRcqT2BM7tElwxEANFA"
@@ -12,11 +13,50 @@ SPREADSHEET_NAME = "https://docs.google.com/spreadsheets/d/1qyLxf4WDh2J0GZcaUz1e
 #     client = gspread.authorize(creds)
 #     return client
 
+# def get_google_client():
+#     creds_dict = json.loads(os.environ["STREAMLIT_CREDENTIALS_JSON"])
+#     creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+#     client = gspread.authorize(creds)
+#     return client
+
+# def get_google_client():
+#     # Load from secrets
+#     creds_dict = json.loads(st.secrets["google"]["credentials_json"])
+#     creds = Credentials.from_service_account_info(
+#         creds_dict,
+#         scopes=["https://www.googleapis.com/auth/spreadsheets"]
+#     )
+#     return gspread.authorize(creds)
+
 def get_google_client():
-    creds_dict = json.loads(os.environ["STREAMLIT_CREDENTIALS_JSON"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
-    client = gspread.authorize(creds)
-    return client
+    creds = None
+
+    try:
+        import streamlit as st
+        if "google" in st.secrets:
+            creds_data = st.secrets["google"]["credentials_json"]
+
+            # Handle if already dict OR string
+            if isinstance(creds_data, str):
+                creds_dict = json.loads(creds_data)
+            else:
+                creds_dict = dict(creds_data)  # already a dict
+
+            creds = Credentials.from_service_account_info(
+                creds_dict,
+                scopes=["https://www.googleapis.com/auth/spreadsheets"]
+            )
+    except Exception:
+        pass
+
+    if creds is None:
+        # fallback: load from local file
+        creds = Credentials.from_service_account_file(
+            "credentials.json",
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+
+    return gspread.authorize(creds)
 
 def get_spreadsheet():
     """Return the spreadsheet object"""
