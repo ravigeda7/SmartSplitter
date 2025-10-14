@@ -21,27 +21,31 @@ family_map = {f['Family ID']: f['Family Name'] for f in families}
 events = read_event_details()
 event_names = [e['Event Name'] for e in events]
 
-# Select Event
-selected_event_name = st.selectbox("Select Event:", event_names)
+# --- Auto-select the open event ---
+open_events = [e for e in events if e.get('Status', '').lower() == 'open']
+default_event_name = open_events[0]['Event Name'] if open_events else event_names[0]
+
+# Select Event (default = open one)
+selected_event_name = st.selectbox("Select Event:", event_names, index=event_names.index(default_event_name))
 event = next(e for e in events if e['Event Name'] == selected_event_name)
 participant_ids = event['Participating Families']
-records = read_event_expenses(event['Event ID'])
+
+# Load expenses safely
+records = read_event_expenses(event['Event ID']) or []
 
 # Prepare DataFrame to show Family Name instead of ID and remove Expense ID
-df_display = pd.DataFrame(records)
-
-# Map Family ID → Family Name
-df_display['Family'] = df_display['Family ID'].map(family_map)
-
-# Keep only the columns you want: Family, Description, Amount
-df_display = df_display[['Family', 'Description', 'Amount']]
+if records:
+    df_display = pd.DataFrame(records)
+    if 'Family ID' in df_display.columns:
+        df_display['Family'] = df_display['Family ID'].map(family_map)
+        df_display = df_display[['Family', 'Description', 'Amount']]
+    else:
+        st.warning("No 'Family ID' column found in expenses sheet.")
+else:
+    df_display = pd.DataFrame(columns=['Family', 'Description', 'Amount'])
 
 st.subheader("Expenses")
 st.dataframe(df_display)
-#
-# # Show Expenses Table
-# st.subheader("Expenses")
-# st.dataframe(records)
 
 # Expense Form (only if event is Open)
 if event['Status'].lower() == "open":
@@ -55,11 +59,8 @@ if event['Status'].lower() == "open":
         if submitted:
             # Map family name back to ID
             fam_id = [fid for fid, name in family_map.items() if name == fam_choice][0]
-
             append_expense(event['Event ID'], fam_id, description, amount)
-
             st.success("Expense added successfully! Please refresh to see it.")
-
 else:
     st.info("This event is closed. You can only view the report.")
 
